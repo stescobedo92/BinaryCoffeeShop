@@ -3,6 +3,7 @@ using BinaryCoffeeShop.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Data;
 
 namespace BinaryCoffeeShop.Controllers
 {
@@ -30,9 +31,7 @@ namespace BinaryCoffeeShop.Controllers
                 return NotFound();
             }
 
-            var product = await _context.Products
-                .Include(p => p.Category)
-                .FirstOrDefaultAsync(m => m.ProductId == id);
+            var product = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(m => m.ProductId == id);
             if (product == null)
             {
                 return NotFound();
@@ -44,7 +43,7 @@ namespace BinaryCoffeeShop.Controllers
         // GET: Products/Create
         public IActionResult Create()
         {
-            ViewData["ProductId"] = new SelectList(_context.Categories, "CategoryId", "Description");
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "CategoryId", "Name");
             return View();
         }
 
@@ -55,13 +54,17 @@ namespace BinaryCoffeeShop.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ProductId,Code,Name,Model,Description,Price,Image,CategoryId,Stock,Brand,IsActive")] Product product)
         {
-            if (ModelState.IsValid)
+            var category = await _context.Categories.Where(category => category.CategoryId == product.CategoryId).FirstOrDefaultAsync();
+
+            if(category is not null)
             {
+                product.Category = category;
                 _context.Add(product);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["ProductId"] = new SelectList(_context.Categories, "CategoryId", "Description", product.ProductId);
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
+
             return View(product);
         }
 
@@ -78,7 +81,7 @@ namespace BinaryCoffeeShop.Controllers
             {
                 return NotFound();
             }
-            ViewData["ProductId"] = new SelectList(_context.Categories, "CategoryId", "Description", product.ProductId);
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
             return View(product);
         }
 
@@ -94,27 +97,25 @@ namespace BinaryCoffeeShop.Controllers
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            var category = await _context.Categories.Where(category => category.CategoryId == product.CategoryId).FirstOrDefaultAsync();
+            if (category is not null)
             {
-                try
+                product.Category = category;
+
+                try 
                 {
                     _context.Update(product);
                     await _context.SaveChangesAsync();
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DBConcurrencyException) 
                 {
-                    if (!ProductExists(product.ProductId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    throw;
                 }
+                
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["ProductId"] = new SelectList(_context.Categories, "CategoryId", "Description", product.ProductId);
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "CategoryId", "Name", product.CategoryId);
+
             return View(product);
         }
 
